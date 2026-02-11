@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentence Master: Tactical Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(circle at top left, #0f172a, #020617);
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 28px;
+        }
+
+        .premium-glow {
+            box-shadow: 0 0 30px rgba(99, 102, 241, 0.15);
+        }
+
+        .cell {
+            aspect-ratio: 1/1;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .cell:hover {
+            background: rgba(255, 255, 255, 0.07);
+            transform: scale(1.05);
+            border-color: #818cf8;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+        }
+
+        .cell.x { color: #818cf8; text-shadow: 0 0 25px rgba(129, 140, 248, 0.6); }
+        .cell.o { color: #fbbf24; text-shadow: 0 0 25px rgba(251, 191, 36, 0.6); }
+
+        .word-chip {
+            background: linear-gradient(135deg, #4f46e5, #3730a3);
+            padding: 14px 28px;
+            border-radius: 14px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .word-chip:hover { transform: translateY(-3px); filter: brightness(1.2); box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
+
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.95);
+            backdrop-filter: blur(12px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 24px;
+        }
+
+        .hide-pinyin .pinyin { display: none; }
+
+        @keyframes pulse-border {
+            0% { border-color: rgba(99, 102, 241, 0.2); }
+            50% { border-color: rgba(99, 102, 241, 0.6); }
+            100% { border-color: rgba(99, 102, 241, 0.2); }
+        }
+
+        .pulse-box { animation: pulse-border 2s infinite; }
+    </style>
+</head>
+<body>
+
+<div class="container max-w-lg w-full px-6">
+    <!-- 1. ENTRY SCREEN -->
+    <div id="setup" class="glass p-10 text-center animate-fade premium-glow">
+        <h1 class="text-4xl font-bold tracking-tight mb-2">SENTENCE MASTER</h1>
+        <p class="text-indigo-400 text-sm tracking-widest uppercase mb-8">Mandarin Tactical Division</p>
+        
+        <div class="space-y-6">
+            <input type="text" id="player-name" placeholder="Enter Operator Name" 
+                class="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-white outline-none focus:border-indigo-500 transition-all text-center text-xl">
+            
+            <button onclick="showInstructions()" 
+                class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 rounded-2xl transition-all shadow-xl shadow-indigo-600/20 active:scale-95">
+                ACCESS SYSTEM
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. INSTRUCTIONS OVERLAY -->
+    <div id="instructions-overlay" class="overlay">
+        <div class="glass p-10 max-w-md w-full text-center border-indigo-500/30 border-2">
+            <h2 class="text-3xl font-bold mb-6 text-indigo-400">Briefing</h2>
+            <div class="text-left space-y-4 mb-8 text-gray-300">
+                <div class="flex gap-4">
+                    <span class="text-indigo-500 font-bold">01</span>
+                    <p>Select an empty sector on the grid to claim it.</p>
+                </div>
+                <div class="flex gap-4">
+                    <span class="text-indigo-500 font-bold">02</span>
+                    <p>Arrange Mandarin words into a <strong>straight horizontal line</strong> to form the correct sentence.</p>
+                </div>
+                <div class="flex gap-4">
+                    <span class="text-indigo-500 font-bold">03</span>
+                    <p>Failure to answer correctly grants the <strong>Enemy Bot</strong> an immediate turn.</p>
+                </div>
+                <div class="flex gap-4">
+                    <span class="text-indigo-500 font-bold">04</span>
+                    <p>Connect 3 symbols in a row to win the mission.</p>
+                </div>
+            </div>
+            <button onclick="startGame()" class="w-full bg-indigo-600 py-4 rounded-xl font-bold hover:bg-indigo-500 transition-all">
+                START MISSION
+            </button>
+        </div>
+    </div>
+
+    <!-- 3. GAME AREA -->
+    <div id="game-area" class="hidden">
+        <div class="flex justify-between items-center mb-10">
+            <div>
+                <p class="text-[10px] text-indigo-400 uppercase tracking-widest font-bold">Operator</p>
+                <h2 id="display-name" class="text-2xl font-bold">-</h2>
+            </div>
+            <div class="text-right">
+                <p class="text-[10px] text-indigo-400 uppercase tracking-widest font-bold">Time Active</p>
+                <h2 class="text-2xl font-bold"><span id="timer">0</span>s</h2>
+            </div>
+        </div>
+
+        <div class="flex justify-center mb-8">
+            <label class="flex items-center cursor-pointer space-x-3 bg-white/5 px-6 py-3 rounded-full border border-white/10 hover:bg-white/10 transition-all">
+                <span class="text-sm font-semibold text-gray-400">Expert Mode (No Pinyin)</span>
+                <input type="checkbox" id="toggle-pinyin" onchange="updatePinyin()" class="form-checkbox h-5 w-5 text-indigo-600 bg-transparent border-white/20">
+            </label>
+        </div>
+
+        <div class="grid grid-cols-3 gap-5" id="board">
+            <div class="cell" onclick="handleCellClick(0)"></div>
+            <div class="cell" onclick="handleCellClick(1)"></div>
+            <div class="cell" onclick="handleCellClick(2)"></div>
+            <div class="cell" onclick="handleCellClick(3)"></div>
+            <div class="cell" onclick="handleCellClick(4)"></div>
+            <div class="cell" onclick="handleCellClick(5)"></div>
+            <div class="cell" onclick="handleCellClick(6)"></div>
+            <div class="cell" onclick="handleCellClick(7)"></div>
+            <div class="cell" onclick="handleCellClick(8)"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 4. QUIZ OVERLAY -->
+<div id="quiz-overlay" class="overlay">
+    <div class="glass p-8 w-full max-w-lg text-center pulse-box" id="quiz-container">
+        <h3 class="text-2xl font-bold mb-2">Assemble Sentence</h3>
+        <p class="text-gray-400 text-sm mb-8">Place words in a straight line from left to right</p>
+        
+        <div class="answer-zone min-h-[90px] bg-white/5 border-2 border-indigo-500/20 rounded-2xl flex flex-nowrap gap-3 p-4 justify-center items-center mb-6 overflow-x-auto" id="answer-zone"></div>
+        
+        <div class="word-pool flex flex-wrap gap-3 justify-center p-4 mb-8" id="word-pool"></div>
+        
+        <button onclick="checkAnswer()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-5 rounded-2xl shadow-lg shadow-emerald-600/20 transition-all">
+            VALIDATE SEQUENCE
+        </button>
+    </div>
+</div>
+
+<!-- 5. FINAL RECORD CARD -->
+<div id="result-overlay" class="overlay">
+    <div class="glass p-12 max-w-sm w-full text-center border-amber-500/40 border-2 relative">
+        <div class="text-7xl mb-6">🏆</div>
+        <h2 class="text-4xl font-black text-amber-500 mb-2 italic">EXCELLENT</h2>
+        <p class="text-gray-400 text-xs tracking-[0.3em] uppercase mb-8">Mission Accomplished</p>
+        
+        <div class="bg-black/20 rounded-2xl p-6 mb-10 space-y-4 border border-white/5">
+            <div class="flex justify-between items-center">
+                <span class="text-gray-500 text-sm uppercase">Operator</span>
+                <span id="res-name" class="font-bold text-lg">-</span>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="text-gray-500 text-sm uppercase">Record</span>
+                <span id="res-time" class="font-bold text-lg text-emerald-400">-</span>
+            </div>
+        </div>
+
+        <div class="p-4 bg-amber-500/10 rounded-xl mb-8 border border-amber-500/20">
+            <p class="text-amber-200 text-xs font-bold uppercase mb-1">Status: Verified</p>
+            <p class="text-gray-400 text-[10px]">Please screenshot this record for your Command Center</p>
+        </div>
+        
+        <button onclick="location.reload()" class="w-full bg-white/5 hover:bg-white/10 text-white font-bold py-4 rounded-xl border border-white/10 transition-all">
+            NEW MISSION
+        </button>
+    </div>
+</div>
+
+<script>
+    let playerName = "";
+    let timerInterval, seconds = 0, board = ["", "", "", "", "", "", "", "", ""], currentCellIndex = null;
+    const questions = [
+        { words: ["我", "用", "口", "说"], pinyin: ["wǒ", "yòng", "kǒu", "shuō"], correct: "我用口说" },
+        { words: ["我", "用", "眼睛", "看"], pinyin: ["wǒ", "yòng", "yǎn jīng", "kàn"], correct: "我用眼睛看" },
+        { words: ["我", "用", "耳朵", "听"], pinyin: ["wǒ", "yòng", "ěr duǒ", "tīng"], correct: "我用耳朵听" },
+        { words: ["我", "用", "鼻子", "闻"], pinyin: ["wǒ", "yòng", "bí zi", "wén"], correct: "我用鼻子闻" }
+    ];
+
+    function showInstructions() {
+        const input = document.getElementById('player-name').value.trim();
+        if (!input) {
+            alert("Please identify yourself, Operator.");
+            return;
+        }
+        playerName = input;
+        document.getElementById('setup').classList.add('hidden');
+        document.getElementById('instructions-overlay').style.display = 'flex';
+    }
+
+    function startGame() {
+        document.getElementById('instructions-overlay').style.display = 'none';
+        document.getElementById('game-area').classList.remove('hidden');
+        document.getElementById('display-name').innerText = playerName;
+        timerInterval = setInterval(() => { 
+            seconds++; 
+            document.getElementById('timer').innerText = seconds; 
+        }, 1000);
+    }
+
+    function handleCellClick(index) {
+        if (board[index] !== "") return;
+        currentCellIndex = index;
+        showQuiz();
+    }
+
+    function showQuiz() {
+        const q = questions[Math.floor(Math.random() * questions.length)];
+        const pool = document.getElementById('word-pool');
+        const zone = document.getElementById('answer-zone');
+        pool.innerHTML = ""; zone.innerHTML = "";
+        zone.dataset.correct = q.correct;
+
+        let items = q.words.map((w, i) => ({ text: w, pin: q.pinyin[i] })).sort(() => Math.random() - 0.5);
+        items.forEach(item => {
+            const chip = document.createElement('div');
+            chip.className = 'word-chip';
+            chip.innerHTML = `<span class="pinyin text-indigo-200/50 text-[10px] block mb-1 font-normal">${item.pin}</span>${item.text}`;
+            chip.onclick = () => {
+                if (chip.parentElement === pool) zone.appendChild(chip);
+                else pool.appendChild(chip);
+            };
+            pool.appendChild(chip);
+        });
+        document.getElementById('quiz-overlay').style.display = 'flex';
+        updatePinyin();
+    }
+
+    function checkAnswer() {
+        const zone = document.getElementById('answer-zone');
+        const userText = Array.from(zone.children).map(c => c.innerText.replace(/[a-z\sāáǎàēéěèīíǐìōóǒòūúǔù]/gi, '').trim()).join('');
+        document.getElementById('quiz-overlay').style.display = 'none';
+
+        if (userText === zone.dataset.correct) {
+            markBoard(currentCellIndex, "X");
+        } else {
+            botTurn();
+        }
+    }
+
+    function markBoard(index, sign) {
+        board[index] = sign;
+        const cell = document.getElementById('board').children[index];
+        cell.innerText = sign === "X" ? "✦" : "◈";
+        cell.className = `cell ${sign.toLowerCase()}`;
+        
+        if (checkWin(sign)) {
+            clearInterval(timerInterval);
+            if (sign === "X") showFinalCard();
+            else {
+                alert("Mission Failed. The Sector was lost.");
+                location.reload();
+            }
+        } else if (!board.includes("")) {
+            alert("Tactical Stalemate (Draw). Try again.");
+            location.reload();
+        }
+    }
+
+    function botTurn() {
+        const empty = board.map((v, i) => v === "" ? i : null).filter(v => v !== null);
+        if (empty.length > 0) {
+            const botChoice = empty[Math.floor(Math.random() * empty.length)];
+            markBoard(botChoice, "O");
+        }
+    }
+
+    function checkWin(s) {
+        const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+        return wins.some(p => p.every(i => board[i] === s));
+    }
+
+    function updatePinyin() {
+        const container = document.getElementById('quiz-container');
+        if (document.getElementById('toggle-pinyin').checked) container.classList.add('hide-pinyin');
+        else container.classList.remove('hide-pinyin');
+    }
+
+    function showFinalCard() {
+        document.getElementById('res-name').innerText = playerName;
+        document.getElementById('res-time').innerText = seconds + "s";
+        document.getElementById('result-overlay').style.display = 'flex';
+    }
+</script>
+
+</body>
+</html>
+
